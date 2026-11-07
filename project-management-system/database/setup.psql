@@ -1,0 +1,7 @@
+-- Run manually as a PostgreSQL administrator. Password is prompted securely.
+CREATE ROLE pms_app LOGIN;
+\password pms_app
+CREATE DATABASE project_management_db OWNER pms_app;
+\connect project_management_db
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA public TO pms_app;

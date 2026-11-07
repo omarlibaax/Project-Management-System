@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+**/target/
+**/node_modules/
+**/dist/
+**/coverage/
+.runtime/
+.storage/
+*.log
+foundation.zip
+**/test-results/
+**/playwright-report/
+**/*.tsbuildinfo
