@@ -34,14 +34,14 @@ Lists default to 20 records; /managers defaults to 100.
 | GET | /api/managers | ADMIN/SUPER_ADMIN | Paginated active ADMIN/SUPER_ADMIN accounts |
 | GET | /api/departments | ADMIN/SUPER_ADMIN | DepartmentView[] |
 | POST | /api/departments | SUPER_ADMIN | 201 DepartmentView |
-| GET | /api/projects | Authenticated | Manager portfolio or empty engineer list |
+| GET | /api/projects | Authenticated | Manager portfolio or actively assigned engineer projects |
 | POST | /api/projects | ADMIN/SUPER_ADMIN | 201 ProjectView |
-| GET | /api/projects/{id} | ADMIN/SUPER_ADMIN | ProjectView; 404 for unauthorized engineers |
+| GET | /api/projects/{id} | Managers / assigned engineers | ProjectView; 404 for unauthorized engineers |
 | PUT | /api/projects/{id} | ADMIN/SUPER_ADMIN | Updated ProjectView |
 | PATCH | /api/projects/{id}/archive | ADMIN/SUPER_ADMIN | Archived ProjectView |
-| GET | /api/projects/{id}/schedule-history | ADMIN/SUPER_ADMIN | ScheduleView[] |
+| GET | /api/projects/{id}/schedule-history | Managers / assigned engineers | ScheduleView[] |
 | GET | /api/dashboard/admin | ADMIN/SUPER_ADMIN | Portfolio Summary |
-| GET | /api/dashboard/engineer | Authenticated | {assignmentManagementAvailable:false}; assignments arrive in Phase 3 |
+| GET | /api/dashboard/engineer | Authenticated | {assignmentManagementAvailable:true,assignedProjects,unfinishedTasks} |
 
 CreateUser fields: employeeCode (required, <=40), fullName (required, <=160),
 email (valid, <=254), phone (optional, <=40), departmentId (optional),
@@ -61,7 +61,7 @@ digits and <=2 decimal digits), scheduleChangeReason (<=1000), version.
 For updates version is required. For date changes a non-blank reason is required.
 Allowed writable statuses: PLANNED, IN_PROGRESS, ON_HOLD, CANCELLED.
 Started projects cannot return to PLANNED. Cancelled, completed, pending-approval,
-and archived projects cannot be edited. Completion states require the future workflow.
+and archived projects cannot be edited. Completion states require the request workflow.
 ArchiveInput: {version}. No hard-delete endpoint exists.
 
 ProjectView: id, code, name, description, category, location, client, managerId,
@@ -84,3 +84,33 @@ See PHASE_2.md for overlapping KPI definitions and archived-record exclusions.
 400: validation error. 401: session unavailable. 403: role/CSRF failure.
 404: missing or unauthorized project. 409: duplicate identity, stale version,
 unsupported transition, or read-only record.
+# Execution API (V3)
+
+V4 additions: `WORK_PLAN` requests require `taskId` and capture work dates, budget and resources. Approval grants permission to submit progress for that unchanged plan, with allocated budgets checked against approved project funds. `DELAY_REASON` records an overdue explanation without changing dates. Overdue engineers must explain the current delay before further progress/completion. Completion requires matching resource quantities, approved current work plans and a PNG/JPEG finish photo.
+
+Tasks also accept optional `startDate` and `plannedBudget`; resources accept optional `taskId`. `PATCH /projects/{id}/tasks/{taskId}/plan` accepts `{startDate,dueDate,plannedBudget,version,reason}`. `PATCH /projects/{id}/resources/{resourceId}/plan` accepts `{planned,unitCost,version,reason}`. Both require management, retain revision history, and invalidate the affected work approval. PDF/Excel exports accept optional `?taskId=...` to generate a work-specific pre-work report. Execution responses also include `resourceHistory` and `workHistory`.
+
+All paths below start with `/api`. Existing session authentication and CSRF requirements apply. Workflow mutations lock the project and increment its version. Decimal quantities and monetary values in execution responses are JSON strings.
+
+| Method and path | Body / result |
+| --- | --- |
+| GET `/projects/{id}/execution` | Assignments, tasks, resources, requests, evidence metadata |
+| POST `/projects/{id}/assignments` | `{ engineerId }`; managers only |
+| DELETE `/projects/{id}/assignments/{assignmentId}` | Revoke; transfer unfinished tasks first |
+| POST `/projects/{id}/tasks` | `{ title, engineerId, dueDate, weight }`; assigned active owner required |
+| PATCH `/projects/{id}/tasks/{taskId}/owner` | `{ engineerId }`; managers only |
+| POST `/projects/{id}/resources` | `{ kind: "LABOR" or "MATERIAL", name, unit, planned, unitCost }` |
+| PATCH `/projects/{id}/resources/{resourceId}` | `{ used, version }`; replaces total usage |
+| POST `/projects/{id}/requests` | `{ kind, taskId?, amount?, requestedDate?, reason }`; returns `{ id }` |
+| POST `/projects/{id}/requests/{requestId}/review` | `{ approve: boolean, note }`; different manager required |
+| POST `/projects/{id}/requests/{requestId}/evidence` | Multipart `file`, submitter only while pending, 5 MB/file, ten files/request |
+| GET `/projects/{id}/evidence/{evidenceId}` | Authorized attachment download |
+| GET `/projects/{id}/report.xlsx` | Native Excel report with text cells preserving exact decimals |
+| GET `/projects/{id}/report.pdf` | Native printable-ASCII PDF report |
+| GET `/projects/{id}/report.csv` | UTF-8 CSV, spreadsheet formula prefixes neutralized |
+| GET `/notifications` | Latest 100 notifications belonging to the current user |
+| PATCH `/notifications/{id}/read` | Mark own notification read |
+
+Request kinds: `PROGRESS` requires an owned task and a greater percentage up to 100; `EXPENSE` requires a positive amount; `BUDGET` requires a manager and specifies the new approved total; `EXTENSION` requires a later requestedDate and an explanation; `COMPLETION` requires all tasks approved at 100% and no pending requests. Reasons are limited to 1000 characters. An explicit boolean decision and a review note are required for review. Evidence is required to approve progress and completion. See EXECUTION.md and IMPLEMENTATION_STATUS.md for complete rules.
+
+Engineers can read only actively assigned projects. Unassigned project/evidence/report reads return 404. Missing role or self-review returns 403, invalid values return 400, stale usage or invalid workflow state returns 409, oversized multipart input returns 413. Repeated reviews return 409. Files are served as attachments with `nosniff` and `no-store`.

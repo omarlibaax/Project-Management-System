@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page
-    .getByLabel("Email address")
+    .getByLabel("Username or email")
     .fill(process.env.PMS_SEED_ADMIN_EMAIL!);
   await page
     .getByLabel("Password", { exact: true })

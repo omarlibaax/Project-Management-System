@@ -8,6 +8,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class ApiErrors {
+  @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+  ResponseEntity<?> uploadTooLarge(Exception ex) {
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+        .body(Map.of("message", "Evidence files must be at most 5 MB."));
+  }
+
   @ExceptionHandler({
     jakarta.validation.ConstraintViolationException.class,
     org.springframework.web.method.annotation.HandlerMethodValidationException.class,

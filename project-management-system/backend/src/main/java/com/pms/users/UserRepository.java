@@ -7,6 +7,12 @@ import org.springframework.data.jpa.repository.*;
 public interface UserRepository
     extends JpaRepository<AppUser, Long>, JpaSpecificationExecutor<AppUser> {
   Optional<AppUser> findByEmail(String email);
+  Optional<AppUser> findByEmployeeCode(String employeeCode);
+
+  default Optional<AppUser> findByLogin(String login) {
+    return findByEmail(login.toLowerCase(java.util.Locale.ROOT))
+        .or(() -> findByEmployeeCode(login));
+  }
 
   boolean existsByEmailIgnoreCase(String email);
 

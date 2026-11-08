@@ -1,4 +1,6 @@
-# Source inventory - Phases 1 and 2
+# Source inventory
+
+Execution adds `backend/src/main/java/com/pms/execution/` (service, controller, delay monitor, native reports), `config/FrontendController.java`, `V3__project_execution.sql`, and `ExecutionTests.java`. The frontend adds `pages/Execution.tsx`, `components/ExecutionCharts.tsx`, execution unit tests, and `e2e/execution.spec.ts`. `EXECUTION.md` and `DEPLOYMENT.md` cover usage and release packaging. `Verify-Foundation.ps1 -Packaged` verifies the bundled frontend. The earlier inventory follows.
 
 The parent Idex.html was preserved. Generated dependencies, build outputs, runtime data and screenshots are excluded.
 

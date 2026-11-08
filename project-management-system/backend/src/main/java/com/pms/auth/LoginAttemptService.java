@@ -21,7 +21,8 @@ public class LoginAttemptService {
   public void failure(String email) {
     if (email == null || email.length() > 254) return;
     users
-        .findForLogin(email.toLowerCase(Locale.ROOT))
+        .findByLogin(email)
+        .flatMap(u -> users.findForLogin(u.email))
         .ifPresent(
             u -> {
               var now = Instant.now();

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 async function signIn(page: import("@playwright/test").Page, engineer = false) {
   await page.goto("/");
   await page
-    .getByLabel("Email address")
+    .getByLabel("Username or email")
     .fill(
       process.env[
         engineer ? "PMS_SEED_ENGINEER_EMAIL" : "PMS_SEED_ADMIN_EMAIL"

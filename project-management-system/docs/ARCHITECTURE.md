@@ -40,10 +40,8 @@ erDiagram
 | Profile, workspace, password, logout | No | Own | Own | Own |
 | Admin access check | No | No | Yes | Yes |
 
-Future project access must query active assignments on the backend, including downloads
-and reports. A frontend role check is for presentation only.
-Storage adapters, uploads, reporting and advanced business workflows belong to
-later phases and have not been represented as completed foundation features.
+Project access queries active assignments on the backend, including downloads and
+reports. A frontend role check is for presentation only. V3 adds execution workflows.
 
 ## Production
 Serve frontend assets and /api behind one HTTPS origin. Forward only trusted proxy headers.
@@ -65,11 +63,34 @@ safe integer range. React uses BigInt for currency grouping instead of rounding 
 | Engineer directory / managers / departments read | No | Yes | Yes |
 | Department creation | No | No | Yes |
 | Project creation/edit/archive | No | Yes | Yes |
-| Project list/detail | Empty list / 404 detail until assignments | All | All |
+| Project list/detail | Actively assigned projects | All | All |
 | Manager dashboard | No | Yes | Yes |
 
-Phase 3 must replace the current no-assignment engineer scope with active assignment
-checks consistently across lists, details, downloads, reports, mutations and dashboards.
+Active assignment checks cover project lists, details, history, execution, downloads,
+reports, and engineer mutations. Engineer dashboard totals exclude archived projects.
+
+## Execution modules (V3)
+
+ExecutionService uses JDBC transactions and project row locks for assignments, tasks,
+resources, requests, evidence, and approvals. Each mutation increments the project
+version so JPA planning edits cannot silently overwrite workflow changes. Requests
+have a pending/approved/rejected lifecycle; row locks serialize concurrent reviews.
+The submitter cannot review their own request. Completion freezes other execution
+changes, and final approval records the actual completion date.
+
+PostgreSQL stores exact NUMERIC values and evidence bytes. ExecutionController
+serializes decimal values as strings. Downloads authorize the project on each request
+and use attachment responses. Uploaded content has a type-signature allowlist and
+per-file/per-request limits; no malware scanner is configured.
+
+DelayMonitor runs hourly using the business clock. Unique deduplication keys prevent
+repeated notifications for the same deadline. Notifications are in-app and user-scoped.
+ProjectReports emits XLSX with text cells and a basic ASCII PDF without additional
+runtime libraries. CSV exports neutralize spreadsheet formula prefixes.
+
+For releases Maven bundles frontend/dist in the Spring Boot JAR. FrontendController
+forwards known SPA routes to index.html; API endpoints retain session authorization.
+See EXECUTION.md for business rules and DEPLOYMENT.md for operational limits.
 
 ### Project ERD
 ```mermaid

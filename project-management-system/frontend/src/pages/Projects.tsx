@@ -26,6 +26,7 @@ import {
   money,
 } from "../components/shared";
 import { Button } from "../components/ui/button";
+import Execution from "./Execution";
 
 export const projectSchema = z
   .object({
@@ -575,9 +576,7 @@ export function ProjectDetailPage({ user }: { user: Profile }) {
             value={p.progress}
             aria-label="Project progress"
           />
-          <p className="muted">
-            Task-based progress becomes available with task management.
-          </p>
+          <p className="muted">Progress is weighted by each task's approved progress.</p>
         </section>
         <section className="panel">
           <h2>Schedule & planning</h2>
@@ -609,6 +608,7 @@ export function ProjectDetailPage({ user }: { user: Profile }) {
           </dl>
         </section>
       </div>
+      <Execution project={p} user={user} />
       <section className="panel">
         <h2>Schedule history</h2>
         {history.isPending ? (

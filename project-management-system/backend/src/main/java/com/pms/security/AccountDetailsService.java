@@ -17,7 +17,7 @@ public class AccountDetailsService implements UserDetailsService {
   public UserDetails loadUserByUsername(String email) {
     var u =
         users
-            .findByEmail(email.toLowerCase(Locale.ROOT))
+            .findByLogin(email)
             .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
     return User.withUsername(u.email)
         .password(u.passwordHash)

@@ -55,6 +55,22 @@ class PmsApplicationTests {
   }
 
   @Test
+  void employeeCodeLoginUsesCanonicalEmailAndLockout() throws Exception {
+    var account = users.findByEmail(email).orElseThrow();
+    String username = account.employeeCode;
+    var session = (MockHttpSession) mvc.perform(post("/api/auth/login").with(csrf())
+        .param("email", username).param("password", password))
+        .andExpect(status().isNoContent()).andReturn().getRequest().getSession(false);
+    mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.email").value(email));
+    for (int attempt = 0; attempt < 5; attempt++)
+      mvc.perform(post("/api/auth/login").with(csrf()).param("email", username)
+          .param("password", "wrong")).andExpect(status().isUnauthorized());
+    mvc.perform(post("/api/auth/login").with(csrf()).param("email", username)
+        .param("password", password)).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void csrfRequiredForLogin() throws Exception {
     mvc.perform(post("/api/auth/login").param("email", email).param("password", password))
         .andExpect(status().isForbidden());

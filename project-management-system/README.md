@@ -2,7 +2,9 @@
 
 A full-stack workspace for construction and engineering organizations to manage project plans, teams, schedules, and portfolio visibility.
 
-**Development status:** Phases 1 and 2 are complete. Assignments, task management, resource tracking, approval workflows, and reporting are planned for subsequent phases.
+**Development status:** The local application includes project execution: assignments, tasks, resources, financial approvals, evidence, completion, overdue notifications, and reports. See the [execution walkthrough](docs/EXECUTION.md) and [deployment guide](docs/DEPLOYMENT.md).
+
+The [requirements review](docs/REQUIREMENTS_REVIEW.md) maps the owner's project statements to the application. Work plans now require permission to proceed; completion requires matched resources and a finish photo. Reports can be exported for a specific work item.
 
 [Getting started](#getting-started) | [Features](#implemented-features) | [Configuration](#configuration) | [Testing](#testing) | [Roadmap](#roadmap) | [Documentation](#documentation)
 
@@ -40,7 +42,19 @@ A full-stack workspace for construction and engineering organizations to manage 
 - Lazy-loaded React feature pages.
 - Optional, repeatable development seeding for 55 projects.
 
-Actual expenses and task progress will be recorded by their respective modules in later phases. Completion and pending-approval states cannot be set through ordinary project forms.
+### Project execution
+
+- Historical engineer assignments, revocation, and task transfers.
+- Weighted progress through independently reviewed task updates.
+- Labor/material plans, usage totals, quantity variance, and cost estimates.
+- Budget approval/revisions and approved expenses within budget.
+- Authorized PDF/PNG/JPEG evidence uploads and attachment downloads.
+- Completion submission, independent review, rejection, and final acceptance.
+- Hourly overdue notifications, explanations, and approved deadline extensions.
+- Interactive task progress chart and native PDF/Excel/CSV exports.
+- React and API distribution in a single Spring Boot JAR.
+
+Completion and pending-approval states are controlled by the request workflow. Create at least two management accounts: a different manager must review every request, including budget approvals.
 
 ## Roles and permissions
 
@@ -50,10 +64,14 @@ Actual expenses and task progress will be recorded by their respective modules i
 | Create departments | Yes | No | No |
 | View engineer directory | Yes | Yes | No |
 | Create, edit, and archive projects | Yes | Yes | No |
-| View portfolio dashboard | Yes | Yes | No |
+| View portfolio dashboard | Yes | Yes | Assigned-project summary |
+| Assign engineers, create/transfer tasks, plan resources | Yes | Yes | No |
+| Submit progress, expenses, extensions, completion | Yes | Yes | Assigned projects; owned tasks for progress |
+| Review another user's requests | Yes | Yes | No |
+| View evidence and export project reports | Yes | Yes | Assigned projects |
 | Sign in and change own password | Yes | Yes | Yes |
 
-Engineer assignment management is scheduled for Phase 3. Until assignments exist, engineers receive an empty project list and cannot retrieve project details. Authorization is enforced by the backend.
+Engineers receive only actively assigned projects. Revocation removes project and evidence access. Authorization is enforced by the backend.
 
 ## Technology stack
 
@@ -200,16 +218,16 @@ If you change `SERVER_PORT`, set `PMS_API_TARGET` in the frontend terminal to ma
 
 ## Testing
 
-The last recorded verification on **7 November 2026** completed successfully:
+Verification on **8 November 2026** completed successfully:
 
 | Check | Recorded result |
 | --- | --- |
-| PostgreSQL-backed backend tests | 24 passed |
-| Frontend tests | 12 passed |
-| Real-browser workflows | 4 passed |
+| PostgreSQL-backed backend tests | 39 passed |
+| Frontend tests | 16 passed |
+| Real-browser workflows | 5 passed |
 | Backend and frontend production builds | Passed |
 
-Coverage includes authentication, roles, suspension, project validation, schedule history, archival, exact monetary values, and 55-project pagination and aggregation.
+Coverage includes authentication, roles, suspension, planning, schedule history, archival, exact monetary values, 55-project aggregation, assignments, weighted progress, independent review, expenses, evidence authorization, extensions, completion, report structure, and mobile navigation.
 
 **Use a separate disposable PostgreSQL database for integration tests.** Configure its URL and credentials in a dedicated terminal before running:
 
@@ -233,11 +251,11 @@ npm.cmd run build
 | --- | --- | --- |
 | 1 | Foundation, authentication, authorization, application layout | Complete |
 | 2 | Users, engineer directory, projects, planning schedules, portfolio summaries | Complete |
-| 3 | Engineer assignments, transfers, tasks, weighted progress | Planned |
-| 4 | Labor, materials, budgets, expenses, resource variances | Planned |
-| 5 | Progress evidence, secure uploads, approvals, completion workflows | Planned |
-| 6 | Scheduled delay detection, notifications, schedule approvals, PDF/Excel reports | Planned |
-| 7 | Full workflow verification, performance review, deployment preparation | Planned |
+| 3 | Engineer assignments, transfers, tasks, weighted progress | Implemented |
+| 4 | Labor, materials, budgets, expenses, resource variances | Implemented |
+| 5 | Progress evidence, secure uploads, approvals, completion workflows | Implemented |
+| 6 | Scheduled delay detection, notifications, schedule approvals, PDF/Excel reports | Implemented |
+| 7 | Local workflow verification and deployment preparation | Implemented; production load testing/hosting require target environment |
 
 See [implementation status](docs/IMPLEMENTATION_STATUS.md) for current boundaries and remaining work.
 
@@ -251,7 +269,8 @@ See [implementation status](docs/IMPLEMENTATION_STATUS.md) for current boundarie
 | Port already in use | Stop the earlier project process or configure another port and matching frontend proxy target. |
 | Maven cannot replace the application JAR | Stop the backend before packaging; Windows locks a running JAR. |
 | HTTP 409 while saving | Reload the latest record before editing; another operation may have changed its version. |
-| Engineer project list is empty | Assignment management is planned for Phase 3; unassigned project access is restricted. |
+| Engineer project list is empty | A manager must assign the engineer to the project. Revoked assignments do not grant access. |
+| A request cannot be approved | Use a different manager from the submitter. Progress/completion require evidence; expenses require sufficient approved budget. |
 
 ## Security and deployment
 
@@ -259,7 +278,7 @@ Authentication is handled by Spring Security. Browser authentication tokens are 
 
 For deployment, use a single HTTPS origin, keep Secure cookies enabled, provide credentials through environment variables or a secret manager, and disable development profiles and seeds. Sessions are currently held in memory, so backend restarts require users to sign in again.
 
-Production deployment and the remaining business workflows are part of the roadmap. Review the [architecture notes](docs/ARCHITECTURE.md) before preparing an environment.
+See the [deployment guide](docs/DEPLOYMENT.md) for single-JAR packaging, HTTPS, migration, account provisioning, backup, and operational limits. Production hosting and traffic-specific load testing require the intended environment.
 
 ## Documentation
 
@@ -269,6 +288,8 @@ Production deployment and the remaining business workflows are part of the roadm
 | [API reference](docs/API.md) | Endpoints, DTO fields, filters, status codes |
 | [Phase 2 guide](docs/PHASE_2.md) | Implementation walkthrough, KPI definitions, manual tests |
 | [Implementation status](docs/IMPLEMENTATION_STATUS.md) | Completed features and remaining phases |
+| [Execution walkthrough](docs/EXECUTION.md) | Assignments through independent completion approval |
+| [Deployment](docs/DEPLOYMENT.md) | Single-JAR release and operations |
 | [Testing](docs/TESTING.md) | Recorded results and reproducible verification |
 | [Dependency versions](docs/VERSIONS.md) | Selected backend and frontend versions |
 | [Source inventory](docs/FILES.md) | Repository files and module locations |

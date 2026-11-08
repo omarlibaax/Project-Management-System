@@ -55,11 +55,22 @@ public class ProjectService {
     if (!Set.of("name", "createdAt", "plannedEndDate", "priority", "status", "code").contains(sort)
         || !Set.of("asc", "desc").contains(direction))
       throw new ResponseStatusException(BAD_REQUEST, "Unsupported sorting option");
-    if (!actor.manager()) return new PageResponse<>(List.of(), 0, page, size, 0);
+    boolean managerAccess = actor.manager();
+    var assigned =
+        managerAccess
+            ? List.<Long>of()
+            : jdbc.queryForList(
+                "select project_id from project_assignments where engineer_id=? and revoked_at is"
+                    + " null",
+                Long.class,
+                actor.user().id);
+    if (!managerAccess && assigned.isEmpty())
+      return new PageResponse<>(List.of(), 0, page, size, 0);
     String term = UserService.escape(search.toLowerCase(Locale.ROOT).trim());
     Specification<Project> spec =
         (r, q, b) -> {
           var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+          if (!managerAccess) predicates.add(r.get("id").in(assigned));
           predicates.add(b.equal(r.get("archived"), archived));
           if (!term.isEmpty())
             predicates.add(
@@ -142,6 +153,7 @@ public class ProjectService {
           input.plannedEndDate(),
           input.scheduleChangeReason().trim(),
           actor.user().id);
+      p.revisedEndDate = null;
     }
     apply(p, input);
     p.updatedAt = Instant.now();
@@ -163,8 +175,15 @@ public class ProjectService {
   }
 
   private Project visible(Long id) {
-    // No assignments exist until Phase 3. Never expose unassigned project records to engineers.
-    if (!actor.manager()) throw new ResponseStatusException(NOT_FOUND, "Project not found");
+    if (!actor.manager()
+        && !Boolean.TRUE.equals(
+            jdbc.queryForObject(
+                "select exists(select 1 from project_assignments where project_id=? and"
+                    + " engineer_id=? and revoked_at is null)",
+                Boolean.class,
+                id,
+                actor.user().id)))
+      throw new ResponseStatusException(NOT_FOUND, "Project not found");
     return projects
         .findById(id)
         .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Project not found"));
@@ -211,12 +230,25 @@ public class ProjectService {
   }
 
   public ScheduleCondition condition(Project p) {
-    if (p.status == Status.COMPLETED || p.status == Status.CANCELLED)
-      return ScheduleCondition.ON_SCHEDULE;
+    if (p.status == Status.COMPLETED) {
+      var deadline = p.revisedEndDate == null ? p.plannedEndDate : p.revisedEndDate;
+      if (p.actualEndDate != null && p.actualEndDate.isAfter(deadline))
+        return ScheduleCondition.DELAYED;
+      return p.actualEndDate != null && p.actualEndDate.isBefore(deadline)
+          ? ScheduleCondition.AHEAD_OF_SCHEDULE
+          : ScheduleCondition.ON_SCHEDULE;
+    }
+    if (p.status == Status.CANCELLED) return ScheduleCondition.ON_SCHEDULE;
     var deadline = p.revisedEndDate == null ? p.plannedEndDate : p.revisedEndDate;
-    return LocalDate.now(clock).isAfter(deadline)
-        ? ScheduleCondition.DELAYED
-        : ScheduleCondition.ON_SCHEDULE;
+    var today = LocalDate.now(clock);
+    if (today.isAfter(deadline)) return ScheduleCondition.DELAYED;
+    if (today.isBefore(p.plannedStartDate)) return ScheduleCondition.ON_SCHEDULE;
+    long duration = ChronoUnit.DAYS.between(p.plannedStartDate, deadline) + 1;
+    double expected =
+        Math.min(100, 100.0 * (ChronoUnit.DAYS.between(p.plannedStartDate, today) + 1) / duration);
+    if (p.progress.doubleValue() > expected + 5) return ScheduleCondition.AHEAD_OF_SCHEDULE;
+    if (p.progress.doubleValue() < expected - 10) return ScheduleCondition.AT_RISK;
+    return ScheduleCondition.ON_SCHEDULE;
   }
 
   private ProjectView view(Project p) {

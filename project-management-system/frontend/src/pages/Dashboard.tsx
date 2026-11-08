@@ -22,6 +22,8 @@ import { Button } from "../components/ui/button";
 
 export default function Dashboard({ user }: { user: Profile }) {
   const admin = user.roles.some((r) => ["ADMIN", "SUPER_ADMIN"].includes(r));
+  const assigned = useQuery({ queryKey: ["dashboard", "engineer"], enabled: !admin,
+    queryFn: async () => (await api.get<{ assignedProjects: number; unfinishedTasks: number }>("/dashboard/engineer")).data });
   const summary = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => (await api.get<Summary>("/dashboard/admin")).data,
@@ -46,12 +48,9 @@ export default function Dashboard({ user }: { user: Profile }) {
         />
         <section className="panel">
           <h2>Assigned projects</h2>
-          <Empty title="No assigned projects yet">
-            <p>
-              Project assignment management arrives in Phase 3. Your access
-              remains limited to authorized projects.
-            </p>
-          </Empty>
+          {assigned.isPending ? <Loading /> : assigned.isError ? <ErrorNotice error={assigned.error} retry={() => assigned.refetch()} /> : <p>{assigned.data.assignedProjects} projects · {assigned.data.unfinishedTasks} unfinished tasks</p>}
+          <p>Open your assigned projects to update tasks, record resource usage, and submit requests.</p>
+          <Button asChild><Link to="/projects">View my projects</Link></Button>
         </section>
       </>
     );
@@ -75,6 +74,7 @@ export default function Dashboard({ user }: { user: Profile }) {
         {[
           { name: "Total projects", value: data.total, Icon: Building2 },
           { name: "In progress", value: data.inProgress, Icon: Clock3 },
+          { name: "On hold", value: data.onHold, Icon: Clock3 },
           { name: "Completed", value: data.completed, Icon: CheckCircle2 },
           { name: "Delayed", value: data.delayed, Icon: AlertTriangle },
         ].map(({ name, value, Icon }) => (
@@ -128,7 +128,7 @@ export default function Dashboard({ user }: { user: Profile }) {
             </div>
           </dl>
           <p className="muted">
-            Detailed budget approvals and expense recording arrive in Phase 4.
+            Open a project to submit budgets and expenses for independent review.
           </p>
         </section>
       </div>

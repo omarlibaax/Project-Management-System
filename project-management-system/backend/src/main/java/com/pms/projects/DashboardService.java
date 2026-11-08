@@ -80,8 +80,24 @@ public class DashboardService {
   }
 
   public Map<String, Object> engineer() {
-    // The database has no assignment module yet. Unassigned engineers have no authorized projects.
-    actor.user();
-    return Map.of("assignmentManagementAvailable", false);
+    Long id = actor.user().id;
+    return Map.of(
+        "assignmentManagementAvailable",
+        true,
+        "assignedProjects",
+        jdbc.queryForObject(
+            "select count(*) from project_assignments a join projects p on p.id=a.project_id where"
+                + " a.engineer_id=? and a.revoked_at is null and not p.archived",
+            Long.class,
+            id),
+        "unfinishedTasks",
+        jdbc.queryForObject(
+            "select count(*) from project_tasks t join project_assignments a on"
+                + " a.project_id=t.project_id and a.engineer_id=t.engineer_id and a.revoked_at is"
+                + " null join projects p on p.id=t.project_id where t.engineer_id=? and"
+                + " t.progress<100 and not p.archived and p.status not in"
+                + " ('COMPLETED','CANCELLED')",
+            Long.class,
+            id));
   }
 }

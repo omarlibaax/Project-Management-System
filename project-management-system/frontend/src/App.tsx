@@ -31,9 +31,10 @@ const ProjectDetailPage = lazy(() =>
   import("./pages/Projects").then((m) => ({ default: m.ProjectDetailPage })),
 );
 const UsersPage = lazy(() => import("./pages/Users"));
+const Notifications = lazy(() => import("./pages/Execution").then(m => ({ default: m.Notifications })));
 
 export const loginSchema = z.object({
-  email: z.email("Enter a valid email address"),
+  email: z.string().trim().min(1, "Enter your username or email").max(254),
   password: z.string().min(1, "Enter your password"),
 });
 type Credentials = z.infer<typeof loginSchema>;
@@ -76,12 +77,12 @@ export function Login({ onLogin }: { onLogin: (user: Profile) => void }) {
           <p className="eyebrow">YOUR PROJECT WORKSPACE</p>
           <h2>Welcome back</h2>
           <p className="muted">Sign in with your organization account.</p>
-          <label htmlFor="email">Email address</label>
+          <label htmlFor="email">Username or email</label>
           <input
             id="email"
-            type="email"
+            type="text"
             autoComplete="username"
-            placeholder="you@organization.com"
+            placeholder="Username or email address"
             {...form.register("email")}
           />
           {form.formState.errors.email && (
@@ -218,6 +219,7 @@ function Workspace({
           <NavLink to="/profile">
             <UserRound size={19} /> My profile
           </NavLink>
+          <NavLink to="/notifications"><ShieldCheck size={19} /> Notifications</NavLink>
         </nav>
         <div className="sidebar-bottom">
           <ShieldCheck size={20} />
@@ -285,6 +287,7 @@ function Workspace({
                 element={<ProjectFormPage user={user} />}
               />
               <Route path="/users" element={<UsersPage user={user} />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route
                 path="/engineers"
                 element={<UsersPage user={user} directory />}
@@ -297,7 +300,7 @@ function Workspace({
             </Routes>
           </Suspense>
           <footer>
-            PMS · Construction & engineering <span>Foundation workspace</span>
+            PMS · Construction & engineering <span>Project workspace</span>
           </footer>
         </main>
       </div>

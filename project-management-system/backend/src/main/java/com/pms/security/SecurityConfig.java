@@ -30,6 +30,18 @@ public class SecurityConfig {
             a ->
                 a.requestMatchers("/api/auth/csrf", "/api/auth/login", "/actuator/health")
                     .permitAll()
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.GET,
+                        "/",
+                        "/index.html",
+                        "/assets/**",
+                        "/projects",
+                        "/projects/**",
+                        "/users",
+                        "/engineers",
+                        "/profile",
+                        "/notifications")
+                    .permitAll()
                     .requestMatchers("/api/admin/**")
                     .hasAnyRole("ADMIN", "SUPER_ADMIN")
                     .anyRequest()

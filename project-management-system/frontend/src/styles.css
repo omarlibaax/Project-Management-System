@@ -846,3 +846,29 @@ footer {
     display: none;
   }
 }
+/* Project execution workflows */
+.execution { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin: 24px 0; }
+.execution > .panel { min-width: 0; }
+.execution .form-footer { flex-wrap: wrap; justify-content: flex-start; align-items: center; }
+.execution-field { min-width: 0; }
+.execution input, .execution select { min-width: 0; max-width: 100%; }
+.execution-form { padding: 16px 0; border-top: 1px solid #e2e8f0; }
+.execution-form h3 { margin-bottom: 12px; }
+.execution-form button { margin-top: 12px; }
+.execution-field { display: grid; gap: 6px; align-content: start; }
+.request-card { border-top: 1px solid #e2e8f0; padding: 20px 0; overflow-wrap: anywhere; }
+.request-card small { display: block; }
+.execution li button { margin: 4px 12px; }
+.task-chart { display: grid; gap: 10px; }
+.task-chart-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(80px, 3fr) auto; gap: 12px; align-items: center; text-align: left; border: 1px solid #e2e8f0; background: white; padding: 12px; border-radius: 8px; cursor: pointer; }
+.task-chart-row[aria-pressed="true"] { border-color: #0f766e; }
+.task-chart-row progress { width: 100%; }
+.task-chart-row span { overflow-wrap: anywhere; }
+.plan-snapshot { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: #f8fafc; padding: 12px; border-radius: 8px; }
+@media print {
+  .sidebar, .main-shell > header, footer, .mobile-menu, button, .execution-form, .filters { display: none !important; }
+  .app-shell, .main-shell, .content, .dashboard-columns { display: block !important; margin: 0 !important; padding: 0 !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc; margin: 16px 0; break-inside: avoid; }
+  .table-scroll { overflow: visible; }
+  body { background: white; color: black; }
+}

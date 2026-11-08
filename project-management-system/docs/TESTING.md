@@ -1,4 +1,6 @@
 # Verification history
+
+Latest V4 requirement review (8 November 2026): 39 backend tests, 16 frontend tests, and five packaged Edge workflows passed. The new checks cover permission-to-proceed, stale work-plan snapshots, work budget coverage, resource matching, required completion photos, audited work/resource revisions, required overdue explanations, and ahead/delayed indicators. Browser verification includes work-specific resources, work-plan approval, resource usage reconciliation, photo-based completion, phone layout and notifications. Physical camera hardware is not exercised; file upload and the mobile capture hint are implemented. See REQUIREMENTS_REVIEW.md.
 Verified on 7 November 2026, Africa/Nairobi:
 - Backend: Maven test/package succeeded; 9 PostgreSQL-backed integration tests, 0 failures.
 - Frontend: 5 Vitest tests passed; TypeScript and Vite production build succeeded.
@@ -79,3 +81,13 @@ Override -JavaExecutable and -PostgresBin if installed elsewhere.
 Run the same commands above. Verify-Foundation.ps1 now runs all Phase 1 and Phase 2 browser tests, with PMS_SEED_PROJECTS enabled only in its disposable database. Normal development seeding remains disabled unless requested. Manual test steps and remaining feature boundaries are in PHASE_2.md.
 
 Live development handoff: V2 applied successfully to the existing project_management_db. The original accounts and changed administrator password were retained. Backend health returned UP through the Vite proxy, the frontend returned HTTP 200, and the existing engineer account could read workspace metadata while its project list remained empty. Administrator workflows were verified separately by the four browser tests with fresh test accounts.
+# Execution verification — 8 November 2026
+
+- Backend: **33 PostgreSQL-backed tests passed**. New tests cover assignment access/revocation, weighted progress, independent review, evidence requirements, exact expenditure, budget limits, transfers, completion rejection/resubmission/approval, extension history, notification deduplication, download/report authorization, CSRF, stale usage, spreadsheet XML, and PDF cross references.
+- Frontend: **15 tests passed**, including engineer permissions, request submission, retained form values after failure, and completed-project controls.
+- Browser: **five Edge workflows passed** against the real backend and a fresh database. The new flow assigns an engineer and creates a task through the UI, signs in as the engineer, submits 100% progress and evidence, signs in as the manager to approve, downloads PDF/Excel, submits and approves final completion with evidence, and checks phone layout and notifications.
+- Frontend and backend production builds pass. React runtime splitting keeps production chunks below the build warning threshold.
+- `Verify-Foundation.ps1` checks prerequisites and port availability, creates random credentials and a fresh test database, restores environment variables, stops its own servers, and drops its test database. On this workstation PostgreSQL may report leftover filesystem files while dropping the temporary database; the SQL database is removed. Test artifacts/logs remain in ignored `.runtime`.
+- Use `scripts/Verify-Foundation.ps1 -Packaged` to run the same browser workflows directly against the bundled JAR, including direct SPA navigation. Build the frontend before packaging the backend.
+
+All testing uses the isolated loopback cluster on port 55432. The normal development database and existing account passwords are unchanged. Production hosting and traffic-specific load testing are not part of these local results. Earlier verification history is recorded above.
