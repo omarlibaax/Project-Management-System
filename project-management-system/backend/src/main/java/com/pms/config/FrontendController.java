@@ -14,7 +14,16 @@ public class FrontendController {
     "/users",
     "/engineers",
     "/profile",
-    "/notifications"
+    "/notifications",
+    "/my-projects",
+    "/tasks",
+    "/labour",
+    "/materials",
+    "/budgets",
+    "/calendar",
+    "/reports",
+    "/approvals",
+    "/settings"
   })
   public String frontend() {
     return "forward:/index.html";

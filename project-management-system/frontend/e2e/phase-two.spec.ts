@@ -8,7 +8,7 @@ async function login(page: import("@playwright/test").Page) {
     .getByLabel("Password", { exact: true })
     .fill(process.env.PMS_SEED_ADMIN_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /Welcome,/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Portfolio overview/ })).toBeVisible();
 }
 
 test("super administrator manages a user and preserves access controls", async ({
@@ -16,7 +16,7 @@ test("super administrator manages a user and preserves access controls", async (
   request,
 }) => {
   await login(page);
-  await page.getByRole("link", { name: "Users", exact: true }).click();
+  await page.getByRole("link", { name: "User administration", exact: true }).click();
   await page.getByRole("button", { name: "Create user", exact: true }).click();
   const editor = page.getByRole("region", { name: "Create user", exact: true });
   await editor.getByLabel("Employee code").fill("BROWSER-001");
@@ -55,7 +55,7 @@ test("super administrator manages a user and preserves access controls", async (
   await page.reload();
   await row.getByRole("button", { name: "Reactivate", exact: true }).click();
   await expect(row).toContainText("Active");
-  await page.getByRole("link", { name: "Engineers", exact: true }).click();
+  await page.getByRole("link", { name: "Engineers / Team", exact: true }).click();
   await expect(
     page.getByRole("row").filter({ hasText: "browser-engineer@example.test" }),
   ).toBeVisible();
@@ -66,10 +66,10 @@ test("project creation, exact budget, schedule history, filters and archival", a
 }) => {
   await login(page);
   await page
-    .getByRole("link", { name: "All projects", exact: true })
+    .getByRole("link", { name: "All Projects", exact: true })
     .first()
     .click();
-  await page.getByRole("link", { name: "Create project", exact: true }).click();
+  await page.getByRole("link", { name: "Create project", exact: true }).last().click();
   await page
     .getByLabel("Project name", { exact: true })
     .fill("Browser bridge works");
@@ -118,7 +118,8 @@ test("project creation, exact budget, schedule history, filters and archival", a
   await expect(
     page.getByText("No projects found", { exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Archived", { exact: true }).check();
+  await page.getByRole("button", { name: "More filters" }).click();
+  await page.getByLabel("Archived only", { exact: true }).check();
   await expect(
     page.getByRole("link", { name: "Browser bridge works", exact: true }),
   ).toBeVisible();

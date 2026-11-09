@@ -1,0 +1,46 @@
+name: Verify application
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: pms_ci
+          POSTGRES_USER: pms_ci
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pms_ci -d pms_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PMS_DB_URL: jdbc:postgresql://localhost:5432/pms_ci
+      PMS_DB_USERNAME: pms_ci
+      PMS_DB_PASSWORD: ci-only-password
+      SPRING_PROFILES_ACTIVE: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: project-management-system/frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - run: npm ci
+        working-directory: project-management-system/frontend
+      - run: npm test && npm run build
+        working-directory: project-management-system/frontend
+      - run: bash mvnw -B -ntp verify
+        working-directory: project-management-system/backend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pms-release
+          path: project-management-system/backend/target/pms-0.0.1-SNAPSHOT.jar
+          if-no-files-found: error

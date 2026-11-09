@@ -1,24 +1,15 @@
 import { useState, lazy, Suspense } from "react";
-import { Navigate, Route, Routes, NavLink } from "react-router";
+import { Navigate, Route, Routes } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  Building2,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  ShieldCheck,
-  UserRound,
-  ArrowRight,
-  HardHat,
-  RefreshCw,
-  FolderKanban,
-  Users,
-} from "lucide-react";
-import { api, csrf, login, logout, message, type Profile } from "./api";
+import { Building2, ShieldCheck, ArrowRight, HardHat } from "lucide-react";
+import { api, csrf, login, message, type Profile } from "./api";
 import { Button } from "./components/ui/button";
+import WorkspaceLayout from "./components/WorkspaceLayout";
+const OperationsPage = lazy(() => import("./pages/Operations"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProjectsPage = lazy(() =>
@@ -187,126 +178,28 @@ function Workspace({
   user: Profile;
   signedOut: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState("");
-  const admin = user.roles.some((role) =>
-    ["ADMIN", "SUPER_ADMIN"].includes(role),
-  );
-  return (
-    <div className="app-shell">
-      <aside className={open ? "sidebar open" : "sidebar"}>
-        <div className="brand">
-          <Building2 /> PMS <span>PROJECT MANAGEMENT</span>
-        </div>
-        <p className="nav-caption">WORKSPACE</p>
-        <nav onClick={() => setOpen(false)}>
-          <NavLink to="/" end>
-            <LayoutDashboard size={19} /> Overview
-          </NavLink>
-          <NavLink to="/projects">
-            <FolderKanban size={19} /> {admin ? "All projects" : "My projects"}
-          </NavLink>
-          {admin && (
-            <NavLink to="/engineers">
-              <HardHat size={19} /> Engineers
-            </NavLink>
-          )}
-          {user.roles.includes("SUPER_ADMIN") && (
-            <NavLink to="/users">
-              <Users size={19} /> Users
-            </NavLink>
-          )}
-          <NavLink to="/profile">
-            <UserRound size={19} /> My profile
-          </NavLink>
-          <NavLink to="/notifications"><ShieldCheck size={19} /> Notifications</NavLink>
-        </nav>
-        <div className="sidebar-bottom">
-          <ShieldCheck size={20} />
-          <div>
-            Secure workspace<small>Role-based access enabled</small>
-          </div>
-        </div>
-      </aside>
-      <div className="main-shell">
-        <header>
-          <Button
-            variant="outline"
-            className="mobile-menu"
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle navigation"
-            aria-expanded={open}
-          >
-            <Menu size={20} />
-          </Button>
-          <span className="header-org">
-            Construction & Engineering <span>/ Project workspace</span>
-          </span>
-          <div className="header-user">
-            <span className="avatar">{user.fullName.slice(0, 1)}</span>
-            <span>
-              {user.fullName}
-              <small>{admin ? "Management" : "Engineer"}</small>
-            </span>
-            <Button
-              variant="outline"
-              aria-label="Sign out"
-              onClick={async () => {
-                try {
-                  await logout();
-                  signedOut();
-                } catch (e) {
-                  setError(message(e));
-                }
-              }}
-            >
-              <LogOut size={17} />
-            </Button>
-          </div>
-        </header>
-        <main className="content">
-          {error && (
-            <p role="alert" className="error">
-              {error}
-            </p>
-          )}
-          <Suspense fallback={<p role="status">Loading workspace...</p>}>
-            <Routes>
-              <Route path="/" element={<Dashboard user={user} />} />
-              <Route path="/projects" element={<ProjectsPage user={user} />} />
-              <Route
-                path="/projects/new"
-                element={<ProjectFormPage user={user} />}
-              />
-              <Route
-                path="/projects/:id"
-                element={<ProjectDetailPage user={user} />}
-              />
-              <Route
-                path="/projects/:id/edit"
-                element={<ProjectFormPage user={user} />}
-              />
-              <Route path="/users" element={<UsersPage user={user} />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route
-                path="/engineers"
-                element={<UsersPage user={user} directory />}
-              />
-              <Route
-                path="/profile"
-                element={<ProfilePage signedOut={signedOut} />}
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-          <footer>
-            PMS · Construction & engineering <span>Project workspace</span>
-          </footer>
-        </main>
-      </div>
-    </div>
-  );
+  const manager = user.roles.some(r => ["ADMIN", "SUPER_ADMIN"].includes(r));
+  return <WorkspaceLayout user={user} signedOut={signedOut}>
+    <Suspense fallback={<p role="status" className="panel">Loading workspace...</p>}>
+      <Routes>
+        <Route path="/" element={<Dashboard user={user} />} />
+        <Route path="/projects" element={<ProjectsPage user={user} />} />
+        <Route path="/my-projects" element={<ProjectsPage user={user} mine />} />
+        <Route path="/projects/new" element={<ProjectFormPage user={user} />} />
+        <Route path="/projects/:id" element={<ProjectDetailPage user={user} />} />
+        <Route path="/projects/:id/edit" element={<ProjectFormPage user={user} />} />
+        <Route path="/users" element={user.roles.includes("SUPER_ADMIN") ? <UsersPage user={user} /> : <Navigate to="/" replace />} />
+        <Route path="/engineers" element={manager ? <UsersPage user={user} directory /> : <Navigate to="/" replace />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/profile" element={<ProfilePage signedOut={signedOut} />} />
+        <Route path="/settings" element={<SettingsPage user={user} />} />
+        {["tasks", "labour", "materials", "budgets", "calendar", "reports", "approvals"].map(module => <Route key={module} path={'/'+module} element={(["budgets", "approvals"].includes(module) && !manager) ? <Navigate to="/" replace /> : <OperationsPage module={module} user={user} />} />)}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  </WorkspaceLayout>;
 }
+
 export default function App() {
   const client = useQueryClient();
   const user = useQuery({

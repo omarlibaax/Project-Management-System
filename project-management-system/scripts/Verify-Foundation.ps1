@@ -16,6 +16,8 @@ $database='pms_browser_'+[guid]::NewGuid().ToString('N')
 if($LASTEXITCODE -ne 0){throw 'Start the isolated PostgreSQL cluster on port 55432 first.'}
 $values=@{
  PMS_DB_URL="jdbc:postgresql://127.0.0.1:55432/$database"
+ SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:55432/$database"
+ SPRING_DATASOURCE_USERNAME='pms_test';SPRING_DATASOURCE_PASSWORD=''
  PMS_DB_USERNAME='pms_test';PMS_DB_PASSWORD=''
  SPRING_PROFILES_ACTIVE='dev';SERVER_PORT='8087'
  PMS_SEED_ADMIN_EMAIL='admin@example.test'

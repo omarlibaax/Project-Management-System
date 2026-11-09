@@ -55,6 +55,17 @@ class PmsApplicationTests {
   }
 
   @Test
+  void portfolioRoutesReturnTheSpaWithoutExposingProtectedApiData() throws Exception {
+    for (String route : new String[] {
+        "/my-projects", "/tasks", "/labour", "/materials", "/budgets",
+        "/calendar", "/reports", "/approvals", "/settings"
+    }) {
+      mvc.perform(get(route)).andExpect(status().isOk()).andExpect(forwardedUrl("/index.html"));
+    }
+    mvc.perform(get("/api/projects")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void employeeCodeLoginUsesCanonicalEmailAndLockout() throws Exception {
     var account = users.findByEmail(email).orElseThrow();
     String username = account.employeeCode;

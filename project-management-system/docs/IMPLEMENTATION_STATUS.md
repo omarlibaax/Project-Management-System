@@ -36,6 +36,7 @@ The local application now includes project execution workflows. Phases 1 and 2 a
 7. PostgreSQL integration tests, browser workflow verification, single-JAR packaging, and deployment/operations guide. Production hosting and traffic-specific load tests require the target environment.
 
 ## Current boundaries
+- GitHub Actions now defines frontend tests/build, PostgreSQL-backed backend verification, and a downloadable release JAR. Hosted workflow execution is confirmed separately from local verification.
 - User administration is SUPER_ADMIN only. ADMIN can manage projects and view the engineer directory.
 - Engineers see only actively assigned projects, including history, execution, evidence, and reports. Revocation immediately removes access. Transfer unfinished tasks before revoking an engineer.
 - COMPLETED and PENDING_APPROVAL cannot be set through ordinary project create/edit requests.

@@ -5,7 +5,7 @@ async function signIn(page: Page, engineer = false) {
   await page.getByLabel('Username or email').fill(process.env[engineer ? 'PMS_SEED_ENGINEER_EMAIL' : 'PMS_SEED_ADMIN_EMAIL']!);
   await page.getByLabel('Password', { exact: true }).fill(process.env[engineer ? 'PMS_SEED_ENGINEER_PASSWORD' : 'PMS_SEED_ADMIN_PASSWORD']!);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /Welcome,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Portfolio overview/ })).toBeVisible();
 }
 async function post(page: Page, path: string, data: unknown) {
   const token = await (await page.request.get('/api/auth/csrf')).json();
@@ -42,7 +42,7 @@ test('assigned engineer submits evidence and manager approves through completion
   await expect(page.getByRole('cell', { name: 'Blocks MATERIAL / pieces' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Welcome back', exact: true })).toBeVisible();
   await signIn(page, true);
-  await page.getByRole('link', { name: 'My projects', exact: true }).click();
+  await page.getByRole('link', { name: 'My Projects', exact: true }).click();
   await page.getByRole('link', { name: project.name, exact: true }).click();
   await page.getByLabel('Task', { exact: true }).selectOption({ label: 'Inspect foundations (0.00%)' });
   await page.getByLabel('Reason / explanation').fill('Work plan ready for permission to proceed.');

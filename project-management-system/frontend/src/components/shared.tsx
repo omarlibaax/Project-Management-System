@@ -3,13 +3,14 @@ import { Button } from "./ui/button";
 import { message } from "../api";
 
 export const label = (value: string) =>
-  value
+  value === 'PLANNED' ? 'Not Started' : value
     .replaceAll("_", " ")
     .toLowerCase()
     .replace(/\b\w/g, (s) => s.toUpperCase());
 export function money(value: string, currency = "KES") {
-  const [whole, fraction = ""] = value.split(".");
-  return `${currency} ${new Intl.NumberFormat("en-KE").format(BigInt(whole || "0"))}.${fraction.padEnd(2, "0").slice(0, 2)}`;
+  const negative = value.startsWith('-');
+  const [whole, fraction = ""] = value.replace('-', '').split(".");
+  return `${currency} ${negative ? '-' : ''}${new Intl.NumberFormat("en-KE").format(BigInt(whole || "0"))}.${fraction.padEnd(2, "0").slice(0, 2)}`;
 }
 export function Badge({ value }: { value: string }) {
   return (

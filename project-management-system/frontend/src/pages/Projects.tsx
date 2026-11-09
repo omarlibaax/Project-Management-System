@@ -4,14 +4,12 @@ import { Link, useNavigate, useParams } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search } from "lucide-react";
 import { api, csrf, message, type Profile } from "../api";
 import {
   type Page,
   type Project,
   type Schedule,
   type User,
-  statuses,
   priorities,
 } from "../types";
 import {
@@ -21,12 +19,13 @@ import {
   ErrorNotice,
   Heading,
   Loading,
-  Pagination,
   label,
   money,
 } from "../components/shared";
 import { Button } from "../components/ui/button";
 import Execution from "./Execution";
+import { toast } from "sonner";
+import ProjectExplorer from "./ProjectExplorer";
 
 export const projectSchema = z
   .object({
@@ -56,174 +55,10 @@ type ProjectValues = z.infer<typeof projectSchema>;
 const isManager = (user: Profile) =>
   user.roles.some((r) => ["ADMIN", "SUPER_ADMIN"].includes(r));
 
-export function ProjectsPage({ user }: { user: Profile }) {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [priority, setPriority] = useState("");
-  const [archived, setArchived] = useState(false);
-  const [page, setPage] = useState(0);
-  const [sort, setSort] = useState("createdAt");
-  const query = useQuery({
-    queryKey: ["projects", { search, status, priority, archived, page, sort }],
-    queryFn: async () =>
-      (
-        await api.get<Page<Project>>("/projects", {
-          params: {
-            search,
-            status: status || undefined,
-            priority: priority || undefined,
-            archived,
-            page,
-            sort,
-            size: 20,
-          },
-        })
-      ).data,
-  });
-  const manager = isManager(user);
-  return (
-    <>
-      <Heading
-        title={manager ? "All projects" : "My projects"}
-        description="Manage project plans, schedules, and priorities."
-      >
-        {manager && (
-          <Button asChild>
-            <Link to="/projects/new">
-              <Plus size={18} /> Create project
-            </Link>
-          </Button>
-        )}
-      </Heading>
-      <section className="panel">
-        <div className="filters">
-          <label className="search-control">
-            <Search size={17} />
-            <span className="sr-only">Search projects</span>
-            <input
-              aria-label="Search projects"
-              placeholder="Search name, code, location..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-            />
-          </label>
-          <select
-            aria-label="Filter status"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">All statuses</option>
-            {statuses.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Filter priority"
-            value={priority}
-            onChange={(e) => {
-              setPriority(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">All priorities</option>
-            {priorities.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Sort projects"
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="createdAt">Newest first</option>
-            <option value="plannedEndDate">Deadline (latest first)</option>
-            <option value="name">Name (Z-A)</option>
-          </select>
-          {manager && (
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={archived}
-                onChange={(e) => {
-                  setArchived(e.target.checked);
-                  setPage(0);
-                }}
-              />{" "}
-              Archived
-            </label>
-          )}
-        </div>
-        {query.isPending ? (
-          <Loading />
-        ) : query.isError ? (
-          <ErrorNotice error={query.error} retry={() => query.refetch()} />
-        ) : (
-          <>
-            {query.data.items.length === 0 ? (
-              <Empty title="No projects found">
-                <p>
-                  {manager
-                    ? "Create a project or adjust your filters."
-                    : "No projects have been assigned to your account."}
-                </p>
-              </Empty>
-            ) : (
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Project</th>
-                      <th>Manager</th>
-                      <th>Status</th>
-                      <th>Priority</th>
-                      <th>Deadline</th>
-                      <th>Schedule</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {query.data.items.map((p) => (
-                      <tr key={p.id}>
-                        <td>
-                          <Link className="text-link" to={`/projects/${p.id}`}>
-                            {p.name}
-                          </Link>
-                          <small>
-                            {p.code} / {p.location}
-                          </small>
-                        </td>
-                        <td>{p.managerName}</td>
-                        <td>
-                          <Badge value={p.status} />
-                        </td>
-                        <td>
-                          <Badge value={p.priority} />
-                        </td>
-                        <td>{p.plannedEndDate}</td>
-                        <td>
-                          <Badge value={p.scheduleCondition} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <Pagination {...query.data} onPage={setPage} />
-          </>
-        )}
-      </section>
-    </>
-  );
+export function ProjectsPage({ user, mine = false }: { user: Profile; mine?: boolean }) {
+  return <ProjectExplorer user={user} mine={mine} />;
 }
+
 function ProjectEditor({
   project,
   user,
@@ -308,6 +143,7 @@ function ProjectEditor({
               }),
               client.invalidateQueries({ queryKey: ["dashboard"] }),
             ]);
+            toast.success(project ? "Project updated" : "Project created");
             navigate(`/projects/${result.data.id}`);
           } catch (e) {
             setError(message(e));
@@ -543,7 +379,10 @@ export function ProjectDetailPage({ user }: { user: Profile }) {
         <Badge value={p.scheduleCondition} />
         {p.archived && <span className="badge">Archived</span>}
       </div>
-      <div className="dashboard-columns">
+      <nav className="project-section-nav" aria-label="Project sections">
+        <a href="#overview">Overview</a><a href="#tasks">Tasks & progress</a><a href="#resources">Labour & materials</a><a href="#approvals">Requests & approvals</a>
+      </nav>
+      <div className="dashboard-columns" id="overview">
         <section className="panel">
           <h2>Project overview</h2>
           <p className="project-description">

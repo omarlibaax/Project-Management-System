@@ -40,7 +40,16 @@ public class SecurityConfig {
                         "/users",
                         "/engineers",
                         "/profile",
-                        "/notifications")
+                        "/notifications",
+                        "/my-projects",
+                        "/tasks",
+                        "/labour",
+                        "/materials",
+                        "/budgets",
+                        "/calendar",
+                        "/reports",
+                        "/approvals",
+                        "/settings")
                     .permitAll()
                     .requestMatchers("/api/admin/**")
                     .hasAnyRole("ADMIN", "SUPER_ADMIN")

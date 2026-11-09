@@ -4,6 +4,8 @@ The application can run as one Spring Boot JAR with the compiled React app inclu
 
 ## Build a release
 
+GitHub Actions runs frontend tests, builds the frontend, verifies the backend against a disposable PostgreSQL 18 service, and uploads the packaged JAR on pushes and pull requests. The workflow is in `.github/workflows/verify.yml` at the repository root. It does not deploy or access the organization's database. Browser workflows remain a separate local check below.
+
 From `project-management-system/`, with the disposable test database configured as described in TESTING.md:
 
 ```powershell
@@ -24,7 +26,7 @@ Build the frontend first. Maven copies `frontend/dist` into the JAR. The API, do
 ## Configure the environment
 
 1. Back up the database, including evidence stored in `project_evidence`. Restore a backup into a staging environment and rehearse migration there.
-2. Set `PMS_DB_URL`, `PMS_DB_USERNAME`, `PMS_DB_PASSWORD`, `PMS_TIMEZONE`, and `PMS_CURRENCY` for the intended database. Flyway applies V1–V3 and Hibernate validates the existing entity schema. The database account needs migration permissions at startup.
+2. Set `PMS_DB_URL`, `PMS_DB_USERNAME`, `PMS_DB_PASSWORD`, `PMS_TIMEZONE`, and `PMS_CURRENCY` for the intended database. Flyway applies V1–V4 and Hibernate validates the existing entity schema. The database account needs migration permissions at startup.
 3. On a fresh database, provision the first administrator using the documented development seed in a private staging environment. Sign in, change its password, create a second manager for independent approvals, then stop the app and remove the development profile and all seed variables. Never run the development profile on the public deployment. Existing installations retain their accounts and passwords.
 4. Keep `PMS_SECURE_COOKIE=true`. Terminate HTTPS on a reverse proxy, forward requests to the backend on a private interface, and set `SERVER_FORWARD_HEADERS_STRATEGY=framework` only when that proxy sanitizes forwarding headers. Configure the proxy upload limit to allow a 5 MB file plus multipart overhead.
 5. Run the JAR under a dedicated service account with automatic restart and a private database connection. Do not expose PostgreSQL to the public network.

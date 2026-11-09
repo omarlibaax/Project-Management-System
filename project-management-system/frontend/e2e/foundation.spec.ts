@@ -16,21 +16,21 @@ async function signIn(page: import("@playwright/test").Page, engineer = false) {
       ]!,
     );
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /Welcome,/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Portfolio overview/ })).toBeVisible();
 }
 test("administrator login, real settings, session cookie, profile and logout", async ({
   page,
   context,
 }) => {
   await signIn(page);
-  await expect(page.getByText("Total projects", { exact: true })).toBeVisible();
+  await expect(page.getByText("Total Projects", { exact: true })).toBeVisible();
   expect(
     (await (await page.request.get("/api/workspace")).json()).timezone,
   ).toBe("Africa/Nairobi");
   const cookie = (await context.cookies()).find((c) => c.name === "JSESSIONID");
   expect(cookie?.httpOnly).toBe(true);
   expect(cookie?.sameSite).toBe("Lax");
-  expect(await page.evaluate(() => localStorage.length)).toBe(0);
+  expect(await page.evaluate(() => Object.keys(localStorage).every(key => ["pms-theme", "pms-sidebar"].includes(key)))).toBe(true);
   expect((await page.request.get("/api/admin/access-check")).status()).toBe(
     200,
   );

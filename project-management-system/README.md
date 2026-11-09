@@ -1,5 +1,7 @@
 # Project Management System
 
+The redesigned workspace includes a live executive dashboard, four project views, responsive navigation, light/dark themes, and portfolio-wide operations pages. See the [interface guide](docs/UIUX.md) for data definitions and verification details.
+
 A full-stack workspace for construction and engineering organizations to manage project plans, teams, schedules, and portfolio visibility.
 
 **Development status:** The local application includes project execution: assignments, tasks, resources, financial approvals, evidence, completion, overdue notifications, and reports. See the [execution walkthrough](docs/EXECUTION.md) and [deployment guide](docs/DEPLOYMENT.md).

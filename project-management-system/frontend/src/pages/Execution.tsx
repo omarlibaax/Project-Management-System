@@ -1,4 +1,5 @@
-import { lazy, Suspense, useId, useState, type FormEvent, type ReactNode } from 'react';
+import { toast } from "sonner";
+import { lazy, Suspense, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api, csrf, message, type Profile } from '../api';
@@ -11,7 +12,7 @@ type Task = { id: number; title: string; engineer_id: number; full_name: string;
 type Resource = { id: number; task_id: number | null; name: string; kind: string; unit: string; planned: string; used: string; unit_cost: string; variance: string; usage_cost: string; version: number };
 type Request = { id: number; kind: string; task_id: number | null; amount: string | null; requested_date: string | null; reason: string; submitted_by: number; full_name: string; submitted_at: string; state: string; review_note: string | null; reviewer_name: string | null; evidence_count: number; plan_snapshot: string | null };
 type Evidence = { id: number; request_id: number; name: string };
-type Workspace = { assignments: Assignment[]; tasks: Task[]; resources: Resource[]; requests: Request[]; evidence: Evidence[] };
+export type Workspace = { assignments: Assignment[]; tasks: Task[]; resources: Resource[]; requests: Request[]; evidence: Evidence[] };
 type Values = Record<string, FormDataEntryValue>;
 const ExecutionCharts = lazy(() => import('../components/ExecutionCharts'));
 const standardLaborTypes = ['General laborer', 'Mason', 'Carpenter', 'Electrician', 'Plumber', 'Painter', 'Steel fixer', 'Welder', 'Machine operator', 'Foreman', 'Surveyor', 'Driver', 'Roofer', 'Tiler'];
@@ -47,10 +48,11 @@ export default function Execution({ project, user }: { project: Project; user: P
     try {
       await api.request({ method, url: `/projects/${id}/${path}`, data: payload, headers: await csrf() });
       await Promise.all(['execution', 'project', 'projects', 'schedule', 'dashboard', 'notifications'].map(key => client.invalidateQueries({ queryKey: key === 'project' || key === 'schedule' || key === 'execution' ? [key, id] : [key] })));
-      setNotice('Saved successfully.'); return true;
+      setNotice('Saved successfully.'); toast.success('Saved successfully'); return true;
     } catch (e) { setError(message(e)); return false; }
     finally { setBusy(false); }
   }
+  useEffect(() => { if (query.data && window.location.hash) requestAnimationFrame(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: 'start' })); }, [query.data]);
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorNotice error={query.error} retry={() => query.refetch()} />;
   const data = query.data;
@@ -73,7 +75,7 @@ export default function Execution({ project, user }: { project: Project; user: P
         </ActionForm>
       </>}
     </section>
-    <section className="panel"><h2>Tasks & weighted progress</h2>
+    <section className="panel" id="tasks"><h2>Tasks & weighted progress</h2>
       {data.tasks.length === 0 ? <p>No tasks yet.</p> : <div className="table-scroll"><table><thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Weight</th><th>Approved progress</th>{manager && writable && <th>Transfer</th>}</tr></thead><tbody>{data.tasks.map(t => <tr key={t.id}><td>{t.title}</td><td>{t.full_name}</td><td>{t.due_date}</td><td>{t.weight}</td><td>{t.progress}%</td>{manager && writable && <td><ActionForm title="Transfer task" busy={busy} submit={v => run(`tasks/${t.id}/owner`, { engineerId: Number(v.engineerId) }, 'patch')}><Field name="engineerId" title={`New owner for ${t.title}`}>{owners}</Field></ActionForm></td>}</tr>)}</tbody></table></div>}
       {manager && writable && <ActionForm title="Create task" busy={busy} submit={v => run('tasks', { ...v, engineerId: Number(v.engineerId) })}>
         <Field name="title" title="Task title" maxLength={240} /><Field name="engineerId" title="Task owner">{owners}</Field><Field name="startDate" title="Work start date" type="date" min={project.plannedStartDate} max={project.revisedEndDate ?? project.plannedEndDate} defaultValue={project.plannedStartDate} /><Field name="dueDate" title="Due date" type="date" min={project.plannedStartDate} max={project.revisedEndDate ?? project.plannedEndDate} /><Field name="weight" title="Relative weight" type="number" min="0.01" max="9999999.99" step="0.01" /><Field name="plannedBudget" title="Work budget allocation" type="number" min="0" step="0.01" defaultValue="0" />
@@ -82,7 +84,7 @@ export default function Execution({ project, user }: { project: Project; user: P
     {data.tasks.length > 0 && <section className="panel"><h2>Upcoming work plans</h2><p>Review each work item's dates, budget breakdown, labor and materials before deciding whether it can proceed.</p>{data.tasks.map(t => <article className="request-card" key={t.id}><h3>{t.title}</h3><p>{t.start_date} to {t.due_date} · Budget: {t.planned_budget} · {t.authorized_plan ? 'Approved to proceed' : 'Manager approval required'}</p><div className="actions"><a className="text-link" href={`/api/projects/${id}/report.pdf?taskId=${t.id}`}>Work plan PDF</a><a className="text-link" href={`/api/projects/${id}/report.xlsx?taskId=${t.id}`}>Work plan Excel</a></div></article>)}</section>}
     {manager && writable && data.tasks.length > 0 && <section className="panel"><h2>Revise work plans</h2>{data.tasks.map(t => <details key={t.id}><summary>Revise work plan: {t.title}</summary><ActionForm title="Save work plan revision" busy={busy} submit={v => run(`tasks/${t.id}/plan`, { ...v, version: t.version }, 'patch')}><Field name="startDate" title={`Revised start: ${t.title}`} type="date" defaultValue={t.start_date} /><Field name="dueDate" title={`Revised end: ${t.title}`} type="date" defaultValue={t.due_date} /><Field name="plannedBudget" title={`Revised budget: ${t.title}`} type="number" min="0" step="0.01" defaultValue={t.planned_budget} /><Field name="reason" title="Work revision reason" maxLength={1000} /></ActionForm></details>)}</section>}
     {data.tasks.length > 0 && <Suspense fallback={<Loading />}><ExecutionCharts tasks={data.tasks} /></Suspense>}
-    <section className="panel"><h2>Labor & materials</h2><p className="muted">Usage costs are estimates. Approved expense requests form the expenditure ledger.</p>
+    <section className="panel" id="resources"><h2>Labor & materials</h2><p className="muted">Usage costs are estimates. Approved expense requests form the expenditure ledger.</p>
       <p role="status">{data.resources.filter(r => Number(r.used) !== Number(r.planned)).length} resource records differ from the plan. Completion stays blocked until they match.</p>
       {data.resources.length === 0 ? <p>No resources planned.</p> : <div className="table-scroll"><table><thead><tr><th>Resource</th><th>Planned</th><th>Used</th><th>Variance</th><th>Unit cost</th><th>Usage cost</th>{writable && <th>Record usage</th>}</tr></thead><tbody>{data.resources.map(r => <tr key={r.id}><td>{r.name}<small>{r.kind} / {r.unit}</small></td><td>{r.planned}</td><td>{r.used}</td><td>{r.variance}</td><td>{r.unit_cost}</td><td>{r.usage_cost}</td>{writable && <td><ActionForm title="Save usage" busy={busy} submit={v => run(`resources/${r.id}`, { used: v.used, version: r.version }, 'patch')}><Field name="used" title={`Total used: ${r.name}`} type="number" min="0" step="0.01" defaultValue={r.used} /></ActionForm></td>}</tr>)}</tbody></table></div>}
       {manager && writable && <ActionForm title="Plan resource" busy={busy} submit={async v => {
@@ -98,7 +100,7 @@ export default function Execution({ project, user }: { project: Project; user: P
       </ActionForm>}
       {manager && writable && data.resources.map(r => <details key={r.id}><summary>Revise resource plan: {r.name}</summary><ActionForm title="Revise resource plan" busy={busy} submit={v => run(`resources/${r.id}/plan`, { ...v, version: r.version }, 'patch')}><Field name="planned" title={`Revised quantity: ${r.name}`} type="number" min="0" step="0.01" defaultValue={r.planned} /><Field name="unitCost" title={`Revised unit cost: ${r.name}`} type="number" min="0" step="0.01" defaultValue={r.unit_cost} /><Field name="reason" title="Revision reason" maxLength={1000} /></ActionForm></details>)}
     </section>
-    <section className="panel"><h2>Requests & approvals</h2><p className="muted">Submit a work plan for the manager's approval before recording progress. A different manager reviews each request. Completion requires all resource quantities to match the plan and a PNG/JPEG finish photo. On supported phones, the photo field opens the camera.</p>
+    <section className="panel" id="approvals"><h2>Requests & approvals</h2><p className="muted">Submit a work plan for the manager's approval before recording progress. A different manager reviews each request. Completion requires all resource quantities to match the plan and a PNG/JPEG finish photo. On supported phones, the photo field opens the camera.</p>
       {writable && <ActionForm title="Submit request" busy={busy} submit={v => run('requests', { ...v, kind, taskId: v.taskId ? Number(v.taskId) : null, amount: v.amount || null, requestedDate: v.requestedDate || null })}>
         <div className="execution-field"><label htmlFor="request-type">Request type</label><select id="request-type" value={kind} onChange={e => setKind(e.target.value)}><option value="WORK_PLAN">Work plan — permission to proceed</option><option value="PROGRESS">Task progress</option><option value="EXPENSE">Expense</option>{manager && <option value="BUDGET">Budget approval / revision</option>}<option value="DELAY_REASON">Delay explanation</option><option value="EXTENSION">Deadline extension</option><option value="COMPLETION">Project completion</option></select></div>
         {['PROGRESS','WORK_PLAN'].includes(kind) && <Field name="taskId" title="Task"><option value="">Select task</option>{data.tasks.filter(t => manager || t.engineer_id === user.id).map(t => <option key={t.id} value={t.id}>{t.title} ({t.progress}%)</option>)}</Field>}
